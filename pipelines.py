@@ -1,8 +1,7 @@
 import itertools
 import logging
+import spacy
 from typing import Optional, Dict, Union
-
-from nltk import sent_tokenize
 
 import torch
 from transformers import(
@@ -13,6 +12,7 @@ from transformers import(
 )
 
 logger = logging.getLogger(__name__)
+spacy.prefer_gpu()
 
 class QGPipeline:
     """Poor man's QG pipeline"""
@@ -45,6 +45,8 @@ class QGPipeline:
             self.model_type = "t5"
         else:
             self.model_type = "bart"
+            
+        self.nlp = spacy.load("en_core_web_trf")
 
     def __call__(self, inputs: str):
         inputs = " ".join(inputs.split())
@@ -112,7 +114,7 @@ class QGPipeline:
         return inputs
     
     def _prepare_inputs_for_ans_extraction(self, text):
-        sents = sent_tokenize(text)
+        sents = [line.sents for line in self.nlp(text)]
 
         inputs = []
         for i in range(len(sents)):
