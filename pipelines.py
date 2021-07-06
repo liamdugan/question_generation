@@ -1,7 +1,8 @@
 import itertools
 import logging
-import spacy
 from typing import Optional, Dict, Union
+
+from nltk import sent_tokenize
 
 import torch
 from transformers import(
@@ -12,7 +13,6 @@ from transformers import(
 )
 
 logger = logging.getLogger(__name__)
-spacy.prefer_gpu()
 
 class QGPipeline:
     """Poor man's QG pipeline"""
@@ -46,8 +46,6 @@ class QGPipeline:
         else:
             self.model_type = "bart"
             
-        self.nlp = spacy.load("en_core_web_trf")
-
     def __call__(self, inputs: str):
         inputs = " ".join(inputs.split())
         sents, answers = self._extract_answers(inputs)
@@ -115,7 +113,7 @@ class QGPipeline:
         return inputs
     
     def _prepare_inputs_for_ans_extraction(self, text):
-        sents = [str(s) for s in list(self.nlp(text[:-4]).sents)]
+        sents = sent_tokenize(text)
 
         inputs = []
         for i in range(len(sents)):
@@ -134,20 +132,18 @@ class QGPipeline:
     
     def _prepare_inputs_for_qg_from_answers_hl(self, sents, answers):
         inputs = []
+        full_text = " ".join(sents)
         for i, answer in enumerate(answers):
+            start = full_text.index(sents[i])
+            end = start + len(sents[i])
             if len(answer) == 0: continue
             for answer_text in answer:
-                sent = sents[i]
-                sents_copy = sents[:]
-                
                 answer_text = answer_text.strip()
+                ans_start_idxs = [j for j in range(len(full_text)) if full_text.startswith(answer_text, j)]
+                ans_start_idxs.sort(key=lambda x:abs(start-x)+abs(end-x))
+                ans_start_idx = ans_start_idxs[0]
                 
-                ans_start_idx = sent.index(answer_text)
-                
-                sent = f"{sent[:ans_start_idx]} <hl> {answer_text} <hl> {sent[ans_start_idx + len(answer_text): ]}"
-                sents_copy[i] = sent
-                
-                source_text = " ".join(sents_copy)
+                source_text = f"{full_text[:ans_start_idx]} <hl> {answer_text} <hl> {full_text[ans_start_idx + len(answer_text): ]}"
                 source_text = f"generate question: {source_text}" 
                 if self.model_type == "t5":
                     source_text = source_text + " </s>"
