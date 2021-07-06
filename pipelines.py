@@ -89,7 +89,8 @@ class QGPipeline:
             max_length=32,
         )
         
-        dec = [self.ans_tokenizer.decode(ids, skip_special_tokens=False) for ids in outs]
+        dec = [self.ans_tokenizer.decode(ids, skip_special_tokens=True) for ids in outs]
+
         answers = [item.split('<sep>') for item in dec]
         answers = [i[:-1] for i in answers]
         
@@ -114,7 +115,7 @@ class QGPipeline:
         return inputs
     
     def _prepare_inputs_for_ans_extraction(self, text):
-        sents = [line.sents for line in self.nlp(text)]
+        sents = [str(s) for s in list(self.nlp(text[:-4]).sents)]
 
         inputs = []
         for i in range(len(sents)):
