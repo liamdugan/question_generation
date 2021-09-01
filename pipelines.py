@@ -140,6 +140,8 @@ class QGPipeline:
             for answer_text in answer:
                 answer_text = answer_text.strip()
                 ans_start_idxs = [j for j in range(len(full_text)) if full_text.startswith(answer_text, j)]
+                if len(ans_start_idxs) == 0: continue
+                
                 ans_start_idxs.sort(key=lambda x:abs(start-x)+abs(end-x))
                 ans_start_idx = ans_start_idxs[0]
                 
